@@ -4,7 +4,6 @@ import bcrypt
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import get_db, init_db
 from models import Book, ListedBook, RequestedBook, User, UserBookRating
 
 
@@ -92,11 +91,6 @@ def get_trending_books(db: Session, limit: int = 10):
         .limit(limit)
         .all()
     )
-
-
-init_db()
-with get_db() as db:
-    user = create_user(db, "John Doe", "john_doe", datetime(1990, 1, 1), "password")
 
 
     

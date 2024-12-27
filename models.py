@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -14,7 +15,7 @@ from sqlalchemy import (
     create_engine,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker, validates
 
 load_dotenv()
 
@@ -38,6 +39,13 @@ class User(Base):
     ratings = relationship("UserBookRating", back_populates="user")
     listed_books = relationship("ListedBook", back_populates="user")
     requested_books = relationship("RequestedBook", back_populates="user")
+
+    # Validation
+    @validates("user_name")
+    def validate_user_name(self, key, value):
+        if not re.match(r"^[^\s,]+$", value):
+            raise ValueError("user_name must be a single word without spaces or commas.")
+        return value
 
 class Book(Base):
     __tablename__ = "books"
