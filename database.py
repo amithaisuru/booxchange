@@ -21,8 +21,9 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             user_id SERIAL PRIMARY KEY,
             name VARCHAR NOT NULL,
-            birth_year DATE,
-            age INTEGER
+            birth_year DATE NOT NULL,
+            password_encrypted VARCHAR NOT NULL,
+            age INT NOT NULL
         )
     ''')
     
@@ -31,12 +32,12 @@ def init_db():
             book_id SERIAL PRIMARY KEY,
             title VARCHAR NOT NULL,
             title_without_series VARCHAR,
-            mod_title VARCHAR,
+            mod_title VARCHAR NOT NULL,
             isbn VARCHAR,
             language_code VARCHAR,
             publication_year DATE,
-            rating_count INTEGER DEFAULT 0,
-            average_rating FLOAT DEFAULT 0,
+            rating_count INT,
+            average_rating FLOAT,
             authors TEXT[],
             cover_image_url VARCHAR
         )
@@ -44,27 +45,28 @@ def init_db():
     
     cur.execute('''
         CREATE TABLE IF NOT EXISTS user_book_ratings (
-            user_id INTEGER REFERENCES users(user_id),
-            book_id INTEGER REFERENCES books(book_id),
-            rated_date DATE DEFAULT CURRENT_DATE,
+            user_id INT REFERENCES users(user_id),
+            book_id INT REFERENCES books(book_id),
+            rating INT NOT NULL,
+            rated_date DATE,
             PRIMARY KEY (user_id, book_id)
         )
     ''')
     
     cur.execute('''
         CREATE TABLE IF NOT EXISTS listed_books (
-            user_id INTEGER REFERENCES users(user_id),
-            book_id INTEGER REFERENCES books(book_id),
-            listed_date DATE DEFAULT CURRENT_DATE,
+            user_id INT REFERENCES users(user_id),
+            book_id INT REFERENCES books(book_id),
+            listed_date DATE NOT NULL,
             PRIMARY KEY (user_id, book_id)
         )
     ''')
     
     cur.execute('''
         CREATE TABLE IF NOT EXISTS requested_books (
-            user_id INTEGER REFERENCES users(user_id),
-            book_id INTEGER REFERENCES books(book_id),
-            requested_date DATE DEFAULT CURRENT_DATE,
+            user_id INT REFERENCES users(user_id),
+            book_id INT REFERENCES books(book_id),
+            requested_date DATE NOT NULL,
             PRIMARY KEY (user_id, book_id)
         )
     ''')
