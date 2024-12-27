@@ -29,6 +29,7 @@ class User(Base):
 
     user_id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    user_name = Column(String, nullable=False, unique=True, index=True)
     birth_year = Column(Date, nullable=False)
     password_encrypted = Column(String, nullable=False)
     age = Column(Integer, nullable=False)

@@ -1,30 +1,43 @@
 from datetime import datetime
 
 import bcrypt
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from database import get_db, init_db
 from models import Book, ListedBook, RequestedBook, User, UserBookRating
 
 
-def create_user(db: Session, name: str, birth_year: datetime, password: str):
+def create_user(db: Session, name: str, user_name: str, birth_year: datetime, password: str):
+    
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     age = datetime.now().year - birth_year.year
     db_user = User(
         name=name,
+        user_name=user_name,
         birth_year=birth_year,
         password_encrypted=hashed_password.decode('utf-8'),
         age=age
     )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+
+    try:
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except IntegrityError as e:
+        db.rollback()
+        if "Key (user_name)" in str(e.orig):
+            print("user already exists")
+        else:
+            print("error creating user")
+        return None
 
 def get_user(db: Session, user_id: int):
     return db.query(User).filter(User.user_id == user_id).first()
 
-def get_user_by_name(db: Session, name: str):
-    return db.query(User).filter(User.name == name).first()
+def get_user_by_name(db: Session, user_name: str):
+    return db.query(User).filter(User.name == user_name).first()
 
 def verify_user(db: Session, name: str, password: str):
     user = get_user_by_name(db, name)
@@ -81,3 +94,9 @@ def get_trending_books(db: Session, limit: int = 10):
     )
 
 
+init_db()
+with get_db() as db:
+    user = create_user(db, "John Doe", "john_doe", datetime(1990, 1, 1), "password")
+
+
+    
