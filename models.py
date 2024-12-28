@@ -59,7 +59,7 @@ class Book(Base):
     publication_year = Column(Date)
     rating_count = Column(Integer, default=0)
     average_rating = Column(Float, default=0.0)
-    authors = Column(ARRAY(Text))
+    authors = Column(ARRAY(Integer))
     cover_image_url = Column(String)
 
     # Relationships
