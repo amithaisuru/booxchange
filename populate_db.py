@@ -1,3 +1,4 @@
+import bcrypt
 import pandas as pd
 from sqlalchemy import create_engine
 
@@ -15,7 +16,7 @@ def populate_books():
     engine = create_engine(DATABASE_URL)
 
     # Define the paths to your CSV files
-    books_csv = "C:\\Users\\Amitha\\uni\\6th semester\\data management project\\book_recommendastion\\main\\final_datasets\\search_engine\\book_data.csv"
+    books_csv = "C:\\Users\\Amitha\\uni\\6th semester\\data management project\\book_recommendastion\\main\\final_datasets\\book_data.csv"
 
     # Read the CSV files into DataFrames
     books_df = pd.read_csv(books_csv)
@@ -37,5 +38,107 @@ def populate_books():
 
     print("Data has been successfully inserted into the database.")
 
+def populate_cities():
+    # Create a database engine
+    engine = create_engine(DATABASE_URL)
+
+    # Define the paths to your CSV files
+    cities_csv = "C:\\Users\\Amitha\\uni\\6th semester\\data management project\\book_recommendastion\\main\\final_datasets\\city.csv"
+
+    # Read the CSV files into DataFrames
+    cities_df = pd.read_csv(cities_csv)
+
+    # Insert the data into the database
+    cities_df.to_sql('city', engine, if_exists='append', index=False)
+
+    print("Data has been successfully inserted into the database.")
+
+def populate_provinces():
+    # Create a database engine
+    engine = create_engine(DATABASE_URL)
+
+    # Define the paths to your CSV files
+    provinces_csv = "C:\\Users\\Amitha\\uni\\6th semester\\data management project\\book_recommendastion\\main\\final_datasets\\province.csv"
+
+    # Read the CSV files into DataFrames
+    provinces_df = pd.read_csv(provinces_csv)
+
+    # Insert the data into the database
+    provinces_df.to_sql('province', engine, if_exists='append', index=False)
+
+    print("Data has been successfully inserted into the database.")
+
+def populate_districts():
+    # Create a database engine
+    engine = create_engine(DATABASE_URL)
+
+    # Define the paths to your CSV files
+    districts_csv = "C:\\Users\\Amitha\\uni\\6th semester\\data management project\\book_recommendastion\\main\\final_datasets\\district.csv"
+
+    # Read the CSV files into DataFrames
+    districts_df = pd.read_csv(districts_csv)
+
+    # Insert the data into the database
+    districts_df.to_sql('district', engine, if_exists='append', index=False)
+
+    print("Data has been successfully inserted into the database.")
+
+def populate_users():
+    # Create a database engine
+    engine = create_engine(DATABASE_URL)
+
+    # Define the paths to your CSV files
+    users_csv = "C:\\Users\\Amitha\\uni\\6th semester\\data management project\\book_recommendastion\\main\\final_datasets\\user_data.csv"
+    password = "password"
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    
+
+    # Read the CSV files into DataFrames
+    user_df = pd.read_csv(users_csv)
+    
+    user_df['password_encrypted'] = hashed_password.decode('utf-8')
+
+
+    # Insert the data into the database
+    user_df.to_sql('users', engine, if_exists='append', index=False)
+
+    print("Data has been successfully inserted into the database.")
+
+def populate_province_district():
+    # Create a database engine
+    engine = create_engine(DATABASE_URL)
+
+    # Define the paths to your CSV files
+    province_district_csv = "C:\\Users\\Amitha\\uni\\6th semester\\data management project\\book_recommendastion\\main\\final_datasets\\province_district.csv"
+
+    # Read the CSV files into DataFrames
+    province_district_df = pd.read_csv(province_district_csv)
+
+    # Insert the data into the database
+    province_district_df.to_sql('province_district', engine, if_exists='append', index=False)
+
+    print("Data has been successfully inserted into the database.")
+
+def populate_district_city():
+    # Create a database engine
+    engine = create_engine(DATABASE_URL)
+
+    # Define the paths to your CSV files
+    district_city_csv = "C:\\Users\\Amitha\\uni\\6th semester\\data management project\\book_recommendastion\\main\\final_datasets\\district_city.csv"
+
+    # Read the CSV files into DataFrames
+    district_city_df = pd.read_csv(district_city_csv)
+
+    # Insert the data into the database
+    district_city_df.to_sql('district_city', engine, if_exists='append', index=False)
+
+    print("Data has been successfully inserted into the database.")
+
 if __name__ == "__main__":
-    populate_books()
+    #populate_books()
+    populate_cities()
+    populate_provinces()
+    populate_districts()
+    populate_province_district()
+    populate_district_city()
+    populate_users()
