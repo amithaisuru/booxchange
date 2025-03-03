@@ -34,11 +34,13 @@ class User(Base):
     birth_year = Column(Date, nullable=False)
     password_encrypted = Column(String, nullable=False)
     age = Column(Integer, nullable=False)
+    city_id = Column(Integer, ForeignKey('city.city_id'), nullable=False)
 
     # Relationships
     ratings = relationship("UserBookRating", back_populates="user")
     listed_books = relationship("ListedBook", back_populates="user")
     requested_books = relationship("RequestedBook", back_populates="user")
+    city = relationship("City", back_populates="user")
 
     # Validation
     @validates("user_name")
@@ -59,7 +61,7 @@ class Book(Base):
     publication_year = Column(Date)
     rating_count = Column(Integer, default=0)
     average_rating = Column(Float, default=0.0)
-    authors = Column(ARRAY(Text))
+    authors = Column(ARRAY(Integer))
     cover_image_url = Column(String)
 
     # Relationships
@@ -100,3 +102,40 @@ class RequestedBook(Base):
     # Relationships
     user = relationship("User", back_populates="requested_books")
     book = relationship("Book", back_populates="requested")
+
+class Province(Base):
+    __tablename__ = 'province'
+    province_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+class District(Base):
+    __tablename__ = 'district'
+    district_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+
+    #relations
+    province = relationship("Province", back_populates="district_id")
+
+class City(Base):
+    __tablename__ = 'city'
+    city_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+
+    #relations
+    user = relationship("User", back_populates="city_id")
+    District = relationship("District", back_populates="city_id")
+
+class ProvinceDistrict(Base):
+    __tablename__ = 'province_district'
+    province_id = Column(Integer, ForeignKey('province.province_id'), primary_key=True)
+    district_id = Column(Integer, ForeignKey('district.district_id'), primary_key=True)
+    #relations
+    province = relationship("Province", back_populates="district_id")
+    district = relationship("District", back_populates="province_id")
+
+class DistrictCity(Base):
+    __tablename__ = 'district_city'
+    district_id = Column(Integer, ForeignKey('district.district_id'), primary_key=True)
+    city_id = Column(Integer, ForeignKey('city.city_id'), primary_key=True)
+    #relations
+    district = relationship("District", back_populates="city_id")
+    city = relationship("City", back_populates="district_id")
