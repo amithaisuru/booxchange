@@ -134,11 +134,27 @@ def populate_district_city():
 
     print("Data has been successfully inserted into the database.")
 
+def populate_user_book_ratings():
+    # Create a database engine
+    engine = create_engine(DATABASE_URL)
+
+    # Define the paths to your CSV files
+    user_book_rating_csv = "C:\\Users\\Amitha\\uni\\6th semester\\data management project\\book_recommendastion\\main\\datasets\\cleaned_datasets\\modified_interactions_with_rDates.csv"
+
+    # Read the CSV files into DataFrames
+    user_book_rating_df = pd.read_csv(user_book_rating_csv, nrows=100000)
+
+    # Insert the data into the database
+    user_book_rating_df.to_sql('user_book_ratings', engine, if_exists='append', index=False)
+
+    print("Data has been successfully inserted into the database.")
+
 if __name__ == "__main__":
     #populate_books()
-    populate_cities()
-    populate_provinces()
-    populate_districts()
-    populate_province_district()
-    populate_district_city()
-    populate_users()
+    # populate_cities()
+    # populate_provinces()
+    # populate_districts()
+    # populate_province_district()
+    # populate_district_city()
+    # populate_users()
+    populate_user_book_ratings()

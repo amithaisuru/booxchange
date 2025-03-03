@@ -107,7 +107,6 @@ class Province(Base):
     __tablename__ = 'province'
     province_id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-
 class District(Base):
     __tablename__ = 'district'
     district_id = Column(Integer, primary_key=True, index=True)
