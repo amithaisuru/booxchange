@@ -1,23 +1,30 @@
 from datetime import datetime
 
 import bcrypt
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from models import Book, ListedBook, RequestedBook, User, UserBookRating
 
 
-def create_user(db: Session, name: str, user_name: str, birth_year: datetime, password: str):
+def create_user(db: Session, name: str, user_name: str, birth_year: datetime, password: str, city_id: int):
+
+    max_id = db.query(func.max(User.user_id)).scalar() or 0
     
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     age = datetime.now().year - birth_year.year
     db_user = User(
+        user_id = max_id + 1,
         name=name,
         user_name=user_name,
         birth_year=birth_year,
         password_encrypted=hashed_password.decode('utf-8'),
-        age=age
+        age=age,
+        city_id=city_id
     )
+
+    print(name, user_name, birth_year, hashed_password, age, city_id)
 
     try:
         db.add(db_user)
@@ -29,7 +36,7 @@ def create_user(db: Session, name: str, user_name: str, birth_year: datetime, pa
         if "Key (user_name)" in str(e.orig):
             print("user already exists")
         else:
-            print("error creating user")
+            print(f"error creating user: {str(e.orig)}")
         return None
 
 def get_user(db: Session, user_id: int):

@@ -28,7 +28,7 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
 
-    user_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, nullable=False)
     user_name = Column(String, nullable=False, unique=True, index=True)
     birth_year = Column(Date, nullable=False)
@@ -40,7 +40,7 @@ class User(Base):
     ratings = relationship("UserBookRating", back_populates="user")
     listed_books = relationship("ListedBook", back_populates="user")
     requested_books = relationship("RequestedBook", back_populates="user")
-    city = relationship("City", back_populates="user")
+    city = relationship("City", back_populates="users")
 
     # Validation
     @validates("user_name")
@@ -105,37 +105,49 @@ class RequestedBook(Base):
 
 class Province(Base):
     __tablename__ = 'province'
+    
     province_id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    
+    # Relationships
+    districts = relationship("ProvinceDistrict", back_populates="province")
+
 class District(Base):
     __tablename__ = 'district'
+    
     district_id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-
-    #relations
-    province = relationship("Province", back_populates="district_id")
+    
+    # Relationships
+    provinces = relationship("ProvinceDistrict", back_populates="district")
+    cities = relationship("DistrictCity", back_populates="district")
 
 class City(Base):
     __tablename__ = 'city'
+    
     city_id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-
-    #relations
-    user = relationship("User", back_populates="city_id")
-    District = relationship("District", back_populates="city_id")
+    
+    # Relationships
+    users = relationship("User", back_populates="city")
+    districts = relationship("DistrictCity", back_populates="city")
 
 class ProvinceDistrict(Base):
     __tablename__ = 'province_district'
+    
     province_id = Column(Integer, ForeignKey('province.province_id'), primary_key=True)
     district_id = Column(Integer, ForeignKey('district.district_id'), primary_key=True)
-    #relations
-    province = relationship("Province", back_populates="district_id")
-    district = relationship("District", back_populates="province_id")
+    
+    # Relationships
+    province = relationship("Province", back_populates="districts")
+    district = relationship("District", back_populates="provinces")
 
 class DistrictCity(Base):
     __tablename__ = 'district_city'
+    
     district_id = Column(Integer, ForeignKey('district.district_id'), primary_key=True)
     city_id = Column(Integer, ForeignKey('city.city_id'), primary_key=True)
-    #relations
-    district = relationship("District", back_populates="city_id")
-    city = relationship("City", back_populates="district_id")
+    
+    # Relationships
+    district = relationship("District", back_populates="cities")
+    city = relationship("City", back_populates="districts")
