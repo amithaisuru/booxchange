@@ -6,7 +6,13 @@ import pandas as pd
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 
-from crud import create_book, get_book_details, get_user_listed_books, list_book
+from crud import (
+    create_book,
+    get_book_details,
+    get_user_listed_books,
+    list_book,
+    remove_listed_book,
+)
 from database import get_db
 
 
@@ -154,5 +160,8 @@ def listed_books_page():
             with col3:
                 if st.button("Remove", key=f"remove_{book.book_id}"):
                     # Implement remove functionality
-                    # This would call a function like remove_listed_book(db, st.session_state.user_id, book.book_id)
-                    st.warning("Remove functionality not implemented yet")
+                    if remove_listed_book(db, st.session_state.user_id, book.book_id):
+                        st.success("Book removed successfully!")
+                    else:
+                        st.error("Error removing book")
+                    st.rerun()
