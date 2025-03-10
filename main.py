@@ -6,7 +6,7 @@ from pages.login import login_page
 
 
 def main():
-    st.set_page_config(page_title="Book Sharing Platform", layout="wide")
+    st.set_page_config(page_title="Booxchange", layout="wide")
     
     # Initialize database
     init_db()

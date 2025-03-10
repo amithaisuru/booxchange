@@ -99,5 +99,8 @@ def get_trending_books(db: Session, limit: int = 10):
         .all()
     )
 
+def get_book_details(db: Session, book_id: int):
+    return db.query(Book).filter(Book.book_id == book_id).first()
+
 
     
