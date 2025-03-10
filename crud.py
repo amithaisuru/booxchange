@@ -62,7 +62,9 @@ def get_book(db: Session, book_id: int):
     return db.query(Book).filter(Book.book_id == book_id).first()
 
 def list_book(db: Session, user_id: int, book_id: int):
+    list_id = db.query(func.max(ListedBook.list_id)).scalar() or 0
     db_listed_book = ListedBook(
+        list_id=list_id + 1,
         user_id=user_id,
         book_id=book_id,
         listed_date=datetime.utcnow()
@@ -71,6 +73,14 @@ def list_book(db: Session, user_id: int, book_id: int):
     db.commit()
     db.refresh(db_listed_book)
     return db_listed_book
+
+def remove_listed_book(db: Session, user_id: int, book_id: int):
+    db_listed_book = db.query(ListedBook).filter(
+        ListedBook.user_id == user_id, ListedBook.book_id == book_id
+    ).first()
+    db.delete(db_listed_book)
+    db.commit()
+    return True
 
 def get_user_listed_books(db: Session, user_id: int):
     return (
@@ -99,5 +109,5 @@ def get_trending_books(db: Session, limit: int = 10):
         .all()
     )
 
-
-    
+def get_book_details(db: Session, book_id: int):
+    return db.query(Book).filter(Book.book_id == book_id).first()

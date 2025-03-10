@@ -18,7 +18,7 @@ def get_city_id(city_name):
         return city.city_id if city else None
 
 def login_page():
-    st.title("Book Sharing Platform")
+    st.title("Booxchange")
     
     tab1, tab2 = st.tabs(["Login", "Register"])
     
