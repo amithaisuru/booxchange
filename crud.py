@@ -62,7 +62,9 @@ def get_book(db: Session, book_id: int):
     return db.query(Book).filter(Book.book_id == book_id).first()
 
 def list_book(db: Session, user_id: int, book_id: int):
+    list_id = db.query(func.max(ListedBook.list_id)).scalar() or 0
     db_listed_book = ListedBook(
+        list_id=list_id + 1,
         user_id=user_id,
         book_id=book_id,
         listed_date=datetime.utcnow()
