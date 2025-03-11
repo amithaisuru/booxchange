@@ -23,7 +23,7 @@ def search(query):
     query_vect = vectorizer.transform([processed_query])
     tfidf = vectorizer.fit_transform(titles["mod_title"])
     similarity_vect = cosine_similarity(query_vect, tfidf).flatten()
-    indices = np.argpartition(similarity_vect, -20)[-20:]
+    indices = np.argpartition(similarity_vect, -10)[-10:]
     top_book_titles = titles.iloc[indices]
     return top_book_titles["book_id"].values #use a suitable return type
 
@@ -42,10 +42,10 @@ def listed_books_page():
     
     with get_db() as db:
         # Add new book section
-        with st.expander("Add New Book", expanded=True):
+        with st.expander("Add New Book", expanded=False):
             # Search option
-            st.subheader("Search for a book")
-            search_query = st.text_input("Enter book title to search")
+            st.subheader("Add book from the library")
+            search_query = st.text_input("Search for the book to add")
             
             if st.button("Search") and search_query:
                 # Get search results using the search function
