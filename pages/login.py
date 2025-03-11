@@ -43,14 +43,19 @@ def login_page():
         user_name = st.text_input("User Name", key="reg_user_name")
         birth_year = st.date_input("Birth Year", min_value=date(1900, 1, 1))
         password = st.text_input("Password", type="password", key="reg_password")
-        city = st.selectbox("City", get_cities_from_db())
-        city_id = get_city_id(city)
-
+        
+        # Get cities for the dropdown
+        cities = get_cities_from_db()
+        city = st.selectbox("City", cities)
         
         if st.button("Register"):
-            with get_db() as db:
-                try:
-                    create_user(db, name, user_name, birth_year, password, city_id)
-                    st.success("Registration successful! Please login.")
-                except Exception as e:
-                    st.error(f"Registration failed: {str(e)}")
+            if not all([name, user_name, birth_year, password, city]):
+                st.error("Please fill in all fields")
+            else:
+                city_id = get_city_id(city)
+                with get_db() as db:
+                    try:
+                        create_user(db, name, user_name, birth_year, password, city_id)
+                        st.success("Registration successful! Please login.")
+                    except Exception as e:
+                        st.error(f"Registration failed: {str(e)}")
