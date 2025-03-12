@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import bcrypt
-from sqlalchemy import func
+from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -90,6 +90,78 @@ def get_user_listed_books(db: Session, user_id: int):
         .all()
     )
 
+def rate_book(db: Session, user_id: int, book_id: int, rating: int):
+    """
+    Rate a book or update an existing rating. This function:
+    1. Checks if the user has already rated this book
+    2. Updates the user_book_ratings table
+    3. Updates the book's rating_count based on the rating value
+    
+    Args:
+        db (Session): Database session
+        user_id (int): ID of the user giving the rating
+        book_id (int): ID of the book being rated
+        rating (int): Rating value (1-5)
+        
+    Returns:
+        UserBookRating: The created or updated rating record
+    """
+    # Get the book
+    book = get_book_details(db, book_id)
+    if not book:
+        return None
+        
+    # Check if the user has already rated this book
+    existing_rating = db.query(UserBookRating).filter(
+        UserBookRating.user_id == user_id,
+        UserBookRating.book_id == book_id
+    ).first()
+    
+    now = datetime.utcnow()
+    
+    if existing_rating:
+        # User has already rated this book - update the rating
+        old_rating = existing_rating.rating
+        existing_rating.rating = rating
+        existing_rating.rated_date = now
+        
+        # Update the book's rating count by removing the old rating value
+        # and adding the new rating value
+        new_count = book.rating_count - old_rating + rating
+        
+        # Update the book's rating count
+        update_stmt = update(Book).where(Book.book_id == book_id).values(
+            rating_count=new_count
+        )
+        db.execute(update_stmt)
+        
+        db.commit()
+        db.refresh(existing_rating)
+        return existing_rating
+    else:
+        # This is a new rating
+        # Create the user rating record
+        db_rating = UserBookRating(
+            user_id=user_id,
+            book_id=book_id,
+            rating=rating,
+            rated_date=now
+        )
+        db.add(db_rating)
+        
+        # Update the book's rating count by adding the new rating value
+        new_count = book.rating_count + rating
+        
+        # Update the book
+        update_stmt = update(Book).where(Book.book_id == book_id).values(
+            rating_count=new_count
+        )
+        db.execute(update_stmt)
+        
+        db.commit()
+        db.refresh(db_rating)
+        return db_rating
+
 def add_book_rating(db: Session, user_id: int, book_id: int):
     db_rating = UserBookRating(
         user_id=user_id,
@@ -111,3 +183,20 @@ def get_trending_books(db: Session, limit: int = 10):
 
 def get_book_details(db: Session, book_id: int):
     return db.query(Book).filter(Book.book_id == book_id).first()
+
+def get_user_book_rating(db: Session, user_id: int, book_id: int):
+    """
+    Get a user's rating for a specific book
+    
+    Args:
+        db (Session): Database session
+        user_id (int): ID of the user
+        book_id (int): ID of the book
+        
+    Returns:
+        UserBookRating or None: The user's rating record if it exists
+    """
+    return db.query(UserBookRating).filter(
+        UserBookRating.user_id == user_id,
+        UserBookRating.book_id == book_id
+    ).first()
