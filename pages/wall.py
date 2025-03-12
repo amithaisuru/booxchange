@@ -1,7 +1,6 @@
 import streamlit as st
 from sqlalchemy import desc
 
-from crud import get_book_details, get_user
 from database import get_db
 from models import Book, City, ListedBook, User
 
@@ -84,7 +83,6 @@ def display_wall():
     with st.empty():
         if st.session_state.total_loaded >= 20:  # Only show if there's potential for more
             st.write("Scroll to load more...")
-            # This is a simplified version. In a real app, you'd use JavaScript for true infinite scroll
 
 if __name__ == "__main__":
     display_wall()
