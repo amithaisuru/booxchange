@@ -70,6 +70,7 @@ def display_wall():
                 }
                 st.switch_page("pages/book_details.py")
                 
+            st.write(f"Rating: {book.average_rating}")
             st.write(f"Posted: {listed_book.listed_date}")
             st.write(f"Location: {city.name}")
             st.write("---")
