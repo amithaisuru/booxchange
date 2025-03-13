@@ -26,7 +26,6 @@ def get_user_liked_books(user_id: int):
             FROM user_book_ratings
             WHERE user_id = %s
             ORDER BY rated_date DESC
-            LIMIT 100
         """
         
         # Execute query with parameter as a tuple
@@ -116,47 +115,53 @@ def get_overlap_users(user_id: int, user_liked_books: pd.DataFrame, min_overlap_
         engine.dispose()
 
 def get_similar_user_liked_books(user_id: int, overlap_users: pd.DataFrame):
+    """
+    Generate a DataFrame of all books rated by similar users and the target user, with user and book indices.
+    
+    Args:
+        user_id (int): The ID of the target user
+        overlap_users (pd.DataFrame): DataFrame of similar users ['user_id', 'frequency', 'overlap_percentage']
+        
+    Returns:
+        pd.DataFrame: DataFrame with columns ['user_id', 'book_id', 'rating', 'rated_date', 'user_index', 'book_index']
+    """
     if overlap_users.empty:
-        print(f"No similar users found for user {user_id}. Returning only target user's ratings.")
-        return None
-    
-    # Extract the list of similar user IDs, including the target user
-    similar_user_ids = tuple(overlap_users['user_id'].tolist() + [user_id])
-    
-    # Create a database engine
-    engine = create_engine(DATABASE_URL)
-    
-    try:
-        # SQL query to fetch all ratings from similar users and the target user
-        query = """
-            SELECT user_id, book_id, rating, rated_date
-            FROM user_book_ratings
-            WHERE user_id IN %s
-            ORDER BY user_id, book_id
-        """
+        print(f"No similar users found for user {user_id}. Fetching only target user's ratings.")
+        all_ratings = get_user_liked_books(user_id)
+    else:
+        similar_user_ids = tuple(overlap_users['user_id'].tolist() + [user_id])
+        engine = create_engine(DATABASE_URL)
         
-        # Execute query with parameters
-        all_ratings = pd.read_sql(
-            query,
-            engine,
-            params=(similar_user_ids,)
-        )
-        
-        # If no ratings found (unlikely), return empty DataFrame
-        if all_ratings.empty:
-            print(f"No ratings found for similar users or target user {user_id}")
-            return pd.DataFrame(columns=['user_id', 'book_id', 'rating', 'rated_date'])
-        
-        print(f"Found {len(all_ratings)} ratings from {len(similar_user_ids)} users (including target user {user_id})")
-        return all_ratings
-        
-    except Exception as e:
-        print(f"Error fetching ratings for recommendations: {str(e)}")
-        return pd.DataFrame(columns=['user_id', 'book_id', 'rating'])
+        try:
+            query = """
+                SELECT user_id, book_id, rating, rated_date
+                FROM user_book_ratings
+                WHERE user_id IN %s
+                ORDER BY user_id, book_id
+            """
+            all_ratings = pd.read_sql(query, engine, params=(similar_user_ids,))
+        except Exception as e:
+            print(f"Error fetching ratings for similar users: {str(e)}")
+            return pd.DataFrame(columns=['user_id', 'book_id', 'rating', 'rated_date', 'user_index', 'book_index'])
+        finally:
+            engine.dispose()
     
-    finally:
-        # Dispose of the engine connection
-        engine.dispose()
+    if all_ratings.empty:
+        print(f"No ratings found for similar users or target user {user_id}")
+        return pd.DataFrame(columns=['user_id', 'book_id', 'rating', 'rated_date', 'user_index', 'book_index'])
+    
+    # Assign unique indices starting from 0 for users and books
+    unique_users = all_ratings['user_id'].unique()
+    unique_books = all_ratings['book_id'].unique()
+    
+    user_index_map = {user_id: idx for idx, user_id in enumerate(unique_users)}
+    book_index_map = {book_id: idx for idx, book_id in enumerate(unique_books)}
+    
+    all_ratings['user_index'] = all_ratings['user_id'].map(user_index_map)
+    all_ratings['book_index'] = all_ratings['book_id'].map(book_index_map)
+    
+    print(f"Found {len(all_ratings)} ratings from {len(unique_users)} users (including target user {user_id})")
+    return all_ratings
 
 def get_recommendations(user_id: int):
     user_liked_books = get_user_liked_books(user_id)
@@ -166,7 +171,7 @@ def get_recommendations(user_id: int):
 
 if __name__ == "__main__":
     # Test the function
-    target_user_id = 2
+    target_user_id = 4
     recommendations = get_recommendations(target_user_id)
     print(f"\nAll ratings from similar users and target user {target_user_id}:")
     print(recommendations.tail(100))
