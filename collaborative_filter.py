@@ -115,13 +115,10 @@ def get_overlap_users(user_id: int, user_liked_books: pd.DataFrame, min_overlap_
         # Dispose of the engine connection
         engine.dispose()
 
-def get_recommendations(user_id: int):
-    user_liked_books = get_user_liked_books(user_id)
-    overlap_users = get_overlap_users(user_id, user_liked_books)
-
+def get_similar_user_liked_books(user_id: int, overlap_users: pd.DataFrame):
     if overlap_users.empty:
         print(f"No similar users found for user {user_id}. Returning only target user's ratings.")
-        return user_liked_books
+        return None
     
     # Extract the list of similar user IDs, including the target user
     similar_user_ids = tuple(overlap_users['user_id'].tolist() + [user_id])
@@ -160,6 +157,12 @@ def get_recommendations(user_id: int):
     finally:
         # Dispose of the engine connection
         engine.dispose()
+
+def get_recommendations(user_id: int):
+    user_liked_books = get_user_liked_books(user_id)
+    overlap_users = get_overlap_users(user_id, user_liked_books)
+    all_similar_book_ratings = get_similar_user_liked_books(user_id, overlap_users)
+    return all_similar_book_ratings
 
 if __name__ == "__main__":
     # Test the function
