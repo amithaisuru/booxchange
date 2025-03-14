@@ -184,6 +184,44 @@ def generate_sparse_matrix(all_ratings: pd.DataFrame):
     return ratings_mat
 
 
+def add_book_metadata(book_recs: pd.DataFrame):
+    """
+    Add metadata (rating_count) from the books table to the book recommendations DataFrame.
+    
+    Args:
+        book_recs (pd.DataFrame): DataFrame with columns ['book_id', 'count', 'mean']
+        
+    Returns:
+        pd.DataFrame: DataFrame with columns ['book_id', 'count', 'mean', 'rating_count']
+    """
+    if book_recs.empty:
+        return pd.DataFrame(columns=['book_id', 'count', 'mean', 'rating_count'])
+
+    # Fetch rating_count from the books table
+    engine = create_engine(DATABASE_URL)
+    try:
+        # Query to get rating_count for all books in book_recs
+        book_ids = tuple(book_recs['book_id'].tolist())
+        query = """
+            SELECT book_id, rating_count
+            FROM books
+            WHERE book_id IN %s
+        """
+        book_counts = pd.read_sql(query, engine, params=(book_ids,))
+    except Exception as e:
+        print(f"Error fetching rating counts from books table: {str(e)}")
+        book_counts = pd.DataFrame(columns=['book_id', 'rating_count'])
+    finally:
+        engine.dispose()
+
+    # Merge rating_count with book_recs
+    book_recs = book_recs.merge(book_counts, on='book_id', how='left')
+    # Fill NaN rating_count with 0 if no data exists in books table (unlikely but possible)
+    book_recs['rating_count'] = book_recs['rating_count'].fillna(0).astype(int)
+
+    return book_recs
+
+
 def get_recommendations(user_id: int):
     # Fetch the target user's liked books
     user_liked_books = get_user_liked_books(user_id)
@@ -223,27 +261,8 @@ def get_recommendations(user_id: int):
         .reset_index()
     )
 
-    # Fetch rating_count from the books table
-    engine = create_engine(DATABASE_URL)
-    try:
-        # Query to get rating_count for all books in book_recs
-        book_ids = tuple(book_recs['book_id'].tolist())
-        query = """
-            SELECT book_id, rating_count
-            FROM books
-            WHERE book_id IN %s
-        """
-        book_counts = pd.read_sql(query, engine, params=(book_ids,))
-    except Exception as e:
-        print(f"Error fetching rating counts from books table: {str(e)}")
-        book_counts = pd.DataFrame(columns=['book_id', 'rating_count'])
-    finally:
-        engine.dispose()
-
-    # Merge rating_count with book_recs
-    book_recs = book_recs.merge(book_counts, on='book_id', how='left')
-    # Fill NaN rating_count with 0 if no data exists in books table (unlikely but possible)
-    book_recs['rating_count'] = book_recs['rating_count'].fillna(0).astype(int)
+    # Add rating_count from books table
+    book_recs = add_book_metadata(book_recs)
 
     # Sort by mean rating (descending) and then by count (descending)
     book_recs = book_recs.sort_values(by=['mean', 'count'], ascending=[False, False])
