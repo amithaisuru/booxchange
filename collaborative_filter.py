@@ -211,17 +211,39 @@ def get_recommendations(user_id: int):
     # If no ratings remain after filtering, return an empty DataFrame
     if similar_ratings.empty:
         print(f"No ratings from similar users available for recommendations for user {user_id}")
-        return pd.DataFrame(columns=['book_id', 'count', 'mean'])
+        return pd.DataFrame(columns=['book_id', 'count', 'mean', 'rating_count'])
 
-    # Group by book_id and calculate count and mean of ratings
-    book_recs = ( #book_id, count, mean
+    # Group by book_id and calculate count and mean of ratings from similar users
+    book_recs = (
         similar_ratings.groupby('book_id')
         .agg(
-            count=('rating', 'count'),  # Number of ratings per book
-            mean=('rating', 'mean')     # Average rating per book
+            count=('rating', 'count'),  # Number of ratings per book from similar users
+            mean=('rating', 'mean')     # Average rating per book from similar users
         )
         .reset_index()
     )
+
+    # Fetch rating_count from the books table
+    engine = create_engine(DATABASE_URL)
+    try:
+        # Query to get rating_count for all books in book_recs
+        book_ids = tuple(book_recs['book_id'].tolist())
+        query = """
+            SELECT book_id, rating_count
+            FROM books
+            WHERE book_id IN %s
+        """
+        book_counts = pd.read_sql(query, engine, params=(book_ids,))
+    except Exception as e:
+        print(f"Error fetching rating counts from books table: {str(e)}")
+        book_counts = pd.DataFrame(columns=['book_id', 'rating_count'])
+    finally:
+        engine.dispose()
+
+    # Merge rating_count with book_recs
+    book_recs = book_recs.merge(book_counts, on='book_id', how='left')
+    # Fill NaN rating_count with 0 if no data exists in books table (unlikely but possible)
+    book_recs['rating_count'] = book_recs['rating_count'].fillna(0).astype(int)
 
     # Sort by mean rating (descending) and then by count (descending)
     book_recs = book_recs.sort_values(by=['mean', 'count'], ascending=[False, False])
