@@ -28,3 +28,6 @@ __pycache__/crud.cpython-310.pyc
 *.pyc
 *.pyc
 /pages/__pycache__
+*.pyc
+/pages/__pycache__
+/pages/__pycache__
