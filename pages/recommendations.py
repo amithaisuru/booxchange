@@ -33,15 +33,17 @@ def display_recommendations():
             if not all_recs:
                 st.write("No books found for these recommendations.")
             else:
-                for book in all_recs:
-                    col1, col2 = st.columns([1, 3])
-                    with col1:
-                        if book.cover_image_url:
-                            st.image(book.cover_image_url, width=50)  # Small cover image
-                        else:
-                            st.write("No cover")
-                    with col2:
-                        st.write(book.title)
+                # Process books in groups of 3
+                for i in range(0, len(all_recs), 3):
+                    row_books = all_recs[i:i + 3]  # Get up to 3 books for this row
+                    cols = st.columns(3)  # Create 3 columns
+                    for idx, book in enumerate(row_books):
+                        with cols[idx]:
+                            if book.cover_image_url:
+                                st.image(book.cover_image_url, width=50)
+                            else:
+                                st.write("No cover")
+                            st.write(book.title)
 
     # Section 2: Detailed list of listed recommended books with pagination
     st.subheader("Available in the Community")
