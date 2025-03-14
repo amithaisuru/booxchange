@@ -303,4 +303,6 @@ def get_recommendations(user_id: int):
     book_recs = book_recs[book_recs['mean'] > mean_threshold] # Average rating is at least 3
     book_recs = book_recs.sort_values(by='score', ascending=False)
 
+    print(book_recs['book_id'].tolist())
+
     return book_recs['book_id'].tolist()
