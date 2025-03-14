@@ -296,7 +296,11 @@ def get_recommendations(user_id: int):
     liked_mod_titles = set(user_liked_books['mod_title'].str.lower())  # Case-insensitive comparison
     book_recs = book_recs[~book_recs['mod_title'].str.lower().isin(liked_mod_titles)]
 
-    # Sort by score (descending)
+    # optimzations
+    count_thresold = 2
+    mean_threshold = 2
+    book_recs = book_recs[book_recs['count'] > count_thresold] # At least 3 similar users have rated the book
+    book_recs = book_recs[book_recs['mean'] > mean_threshold] # Average rating is at least 3
     book_recs = book_recs.sort_values(by='score', ascending=False)
 
     print(f"Generated {len(book_recs)} book recommendations for user {user_id}")
