@@ -53,6 +53,7 @@ def get_user_liked_books(user_id: int):
         # Dispose of the engine connection
         engine.dispose()
 
+
 def get_overlap_users(user_id: int, user_liked_books: pd.DataFrame, min_overlap_percentage: float = 0.20):
     """
     Generate a DataFrame of users with overlapping books exceeding a minimum percentage of the target user's rated books.
@@ -116,6 +117,7 @@ def get_overlap_users(user_id: int, user_liked_books: pd.DataFrame, min_overlap_
         # Dispose of the engine connection
         engine.dispose()
 
+
 def get_similar_user_liked_books(user_id: int, overlap_users: pd.DataFrame):
     """
     Generate a DataFrame of all books rated by similar users and the target user, with user and book indices.
@@ -162,43 +164,75 @@ def get_similar_user_liked_books(user_id: int, overlap_users: pd.DataFrame):
     all_ratings['user_index'] = all_ratings['user_id'].map(user_index_map)
     all_ratings['book_index'] = all_ratings['book_id'].map(book_index_map)
 
-    #find the index of user_id
+    # Find the index of the target user_id
     user_index = all_ratings[all_ratings['user_id'] == user_id]['user_index'].values[0]
     
     print(f"Found {len(all_ratings)} ratings from {len(unique_users)} users (including target user {user_id})")
-    return user_index,all_ratings
+    return user_index, all_ratings
+
 
 def generate_sparse_matrix(all_ratings: pd.DataFrame):
+    # Create a sparse matrix in COO format using user_index, book_index, and ratings
     ratings_mat = coo_matrix(
         (all_ratings['rating'],
-        (all_ratings['user_index'], all_ratings['book_index']))
+         (all_ratings['user_index'], all_ratings['book_index']))
     )
-    #conver to csr matrix
+    # Convert to CSR format for efficient row operations
     ratings_mat = ratings_mat.tocsr()
 
     print(f"Generated sparse matrix of shape {ratings_mat.shape}")
     return ratings_mat
 
+
 def get_recommendations(user_id: int):
+    # Fetch the target user's liked books
     user_liked_books = get_user_liked_books(user_id)
+    # Find users with significant overlap
     overlap_users = get_overlap_users(user_id, user_liked_books)
-    user_index,all_similar_book_ratings = get_similar_user_liked_books(user_id, overlap_users)
+    # Get ratings from similar users and the target user's index
+    user_index, all_similar_book_ratings = get_similar_user_liked_books(user_id, overlap_users)
+    # Generate sparse matrix from all ratings
     ratings_mat = generate_sparse_matrix(all_similar_book_ratings)
 
-    #find cosine similarity
+    # Calculate cosine similarity between the target user and all other users
     similarity = cosine_similarity(ratings_mat[user_index, :], ratings_mat).flatten()
 
-    #get the index of the most 15 similar user
-    similar_user_indexs = similarity.argsort()[-15:]
-    #remove user_index
-    similar_user_indexs = similar_user_indexs[similar_user_indexs != user_index]
-    #keep values relavan to the similart_user_index in all_similar_book_ratings
-    all_similar_book_ratings = all_similar_book_ratings[all_similar_book_ratings['user_index'].isin(similar_user_indexs)].copy()
+    # Get indices of the 15 most similar users (excluding the target user)
+    similar_user_indices = similarity.argsort()[-16:][::-1]  # Get top 16 (including user) and reverse for descending order
+    similar_user_indices = similar_user_indices[similar_user_indices != user_index]  # Remove target user
+    similar_user_indices = similar_user_indices[:15]  # Keep only top 15
 
-    return all_similar_book_ratings
+    # Filter ratings to include only those from the most similar users (exclude target user)
+    similar_ratings = all_similar_book_ratings[
+        (all_similar_book_ratings['user_index'].isin(similar_user_indices)) &
+        (all_similar_book_ratings['user_id'] != user_id)
+    ].copy()
+
+    # If no ratings remain after filtering, return an empty DataFrame
+    if similar_ratings.empty:
+        print(f"No ratings from similar users available for recommendations for user {user_id}")
+        return pd.DataFrame(columns=['book_id', 'count', 'mean'])
+
+    # Group by book_id and calculate count and mean of ratings
+    book_recs = ( #book_id, count, mean
+        similar_ratings.groupby('book_id')
+        .agg(
+            count=('rating', 'count'),  # Number of ratings per book
+            mean=('rating', 'mean')     # Average rating per book
+        )
+        .reset_index()
+    )
+
+    # Sort by mean rating (descending) and then by count (descending)
+    book_recs = book_recs.sort_values(by=['mean', 'count'], ascending=[False, False])
+
+    print(f"Generated {len(book_recs)} book recommendations for user {user_id}")
+    return book_recs
+
 
 if __name__ == "__main__":
     # Test the function
     target_user_id = 2
     similar_books = get_recommendations(target_user_id)
-    print(similar_books)
+    print(f"\nTop book recommendations for user {target_user_id}:")
+    print(similar_books.head(10))  # Show top 10 recommendations
