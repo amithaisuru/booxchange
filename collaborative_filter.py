@@ -186,21 +186,21 @@ def generate_sparse_matrix(all_ratings: pd.DataFrame):
 
 def add_book_metadata(book_recs: pd.DataFrame):
     """
-    Add metadata (rating_count) from the books table to the book recommendations DataFrame.
+    Add metadata (rating_count, mod_title) from the books table to the book recommendations DataFrame.
     
     Args:
         book_recs (pd.DataFrame): DataFrame with columns ['book_id', 'count', 'mean']
         
     Returns:
-        pd.DataFrame: DataFrame with columns ['book_id', 'count', 'mean', 'rating_count']
+        pd.DataFrame: DataFrame with columns ['book_id', 'count', 'mean', 'rating_count', 'mod_title']
     """
     if book_recs.empty:
-        return pd.DataFrame(columns=['book_id', 'count', 'mean', 'rating_count'])
+        return pd.DataFrame(columns=['book_id', 'count', 'mean', 'rating_count', 'mod_title'])
 
-    # Fetch rating_count from the books table
+    # Fetch rating_count and mod_title from the books table
     engine = create_engine(DATABASE_URL)
     try:
-        # Query to get rating_count for all books in book_recs
+        # Query to get rating_count and mod_title for all books in book_recs
         book_ids = tuple(book_recs['book_id'].tolist())
         query = """
             SELECT book_id, rating_count, mod_title
@@ -214,10 +214,12 @@ def add_book_metadata(book_recs: pd.DataFrame):
     finally:
         engine.dispose()
 
-    # Merge rating_count with book_recs
+    # Merge rating_count and mod_title with book_recs
     book_recs = book_recs.merge(book_counts, on='book_id', how='left')
     # Fill NaN rating_count with 0 if no data exists in books table (unlikely but possible)
     book_recs['rating_count'] = book_recs['rating_count'].fillna(0).astype(int)
+    # Fill NaN mod_title with empty string
+    book_recs['mod_title'] = book_recs['mod_title'].fillna('')
 
     return book_recs
 
@@ -225,6 +227,25 @@ def add_book_metadata(book_recs: pd.DataFrame):
 def get_recommendations(user_id: int):
     # Fetch the target user's liked books
     user_liked_books = get_user_liked_books(user_id)
+    
+    # Fetch mod_title for the user's liked books
+    engine = create_engine(DATABASE_URL)
+    try:
+        liked_book_ids = tuple(user_liked_books['book_id'].tolist())
+        query = """
+            SELECT book_id, mod_title
+            FROM books
+            WHERE book_id IN %s
+        """
+        user_liked_books_meta = pd.read_sql(query, engine, params=(liked_book_ids,))
+        user_liked_books = user_liked_books.merge(user_liked_books_meta, on='book_id', how='left')
+        user_liked_books['mod_title'] = user_liked_books['mod_title'].fillna('')
+    except Exception as e:
+        print(f"Error fetching mod_title for user liked books: {str(e)}")
+        user_liked_books['mod_title'] = ''
+    finally:
+        engine.dispose()
+
     # Find users with significant overlap
     overlap_users = get_overlap_users(user_id, user_liked_books)
     # Get ratings from similar users and the target user's index
@@ -249,7 +270,7 @@ def get_recommendations(user_id: int):
     # If no ratings remain after filtering, return an empty DataFrame
     if similar_ratings.empty:
         print(f"No ratings from similar users available for recommendations for user {user_id}")
-        return pd.DataFrame(columns=['book_id', 'count', 'mean', 'rating_count'])
+        return pd.DataFrame(columns=['book_id', 'count', 'mean', 'rating_count', 'mod_title', 'adjusted_count', 'score'])
 
     # Group by book_id and calculate count and mean of ratings from similar users
     book_recs = (
@@ -261,16 +282,22 @@ def get_recommendations(user_id: int):
         .reset_index()
     )
 
-    # Add rating_count from books table
+    # Add rating_count and mod_title from books table
     book_recs = add_book_metadata(book_recs)
 
-    #adding adjusted cont
+    # Add adjusted count and score
     book_recs['adjusted_count'] = book_recs['count'] * (book_recs['count'] / book_recs['rating_count'])
     book_recs['score'] = book_recs['mean'] * book_recs['adjusted_count']
-    #remove books that in users like list
+
+    # Remove books that are in the user's liked list (by book_id)
     book_recs = book_recs[~book_recs['book_id'].isin(user_liked_books['book_id'])]
-    
-    #remove books that have same mod title with user liked books
+
+    # Remove books that have the same mod_title as any in user_liked_books
+    liked_mod_titles = set(user_liked_books['mod_title'].str.lower())  # Case-insensitive comparison
+    book_recs = book_recs[~book_recs['mod_title'].str.lower().isin(liked_mod_titles)]
+
+    # Sort by score (descending)
+    book_recs = book_recs.sort_values(by='score', ascending=False)
 
     print(f"Generated {len(book_recs)} book recommendations for user {user_id}")
     return book_recs
