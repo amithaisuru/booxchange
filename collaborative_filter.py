@@ -203,14 +203,14 @@ def add_book_metadata(book_recs: pd.DataFrame):
         # Query to get rating_count for all books in book_recs
         book_ids = tuple(book_recs['book_id'].tolist())
         query = """
-            SELECT book_id, rating_count
+            SELECT book_id, rating_count, mod_title
             FROM books
             WHERE book_id IN %s
         """
         book_counts = pd.read_sql(query, engine, params=(book_ids,))
     except Exception as e:
         print(f"Error fetching rating counts from books table: {str(e)}")
-        book_counts = pd.DataFrame(columns=['book_id', 'rating_count'])
+        book_counts = pd.DataFrame(columns=['book_id', 'rating_count', 'mod_title'])
     finally:
         engine.dispose()
 
@@ -264,8 +264,13 @@ def get_recommendations(user_id: int):
     # Add rating_count from books table
     book_recs = add_book_metadata(book_recs)
 
-    # Sort by mean rating (descending) and then by count (descending)
-    book_recs = book_recs.sort_values(by=['mean', 'count'], ascending=[False, False])
+    #adding adjusted cont
+    book_recs['adjusted_count'] = book_recs['count'] * (book_recs['count'] / book_recs['rating_count'])
+    book_recs['score'] = book_recs['mean'] * book_recs['adjusted_count']
+    #remove books that in users like list
+    book_recs = book_recs[~book_recs['book_id'].isin(user_liked_books['book_id'])]
+    
+    #remove books that have same mod title with user liked books
 
     print(f"Generated {len(book_recs)} book recommendations for user {user_id}")
     return book_recs
