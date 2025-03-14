@@ -9,11 +9,42 @@ from models import Book, City, ListedBook, User
 
 def display_recommendations():
     st.title("Book Recommendations")
-    st.write("Books recommended for you that are available in the community")
+    st.write("Books recommended for you based on your ratings")
 
     if 'user_id' not in st.session_state or st.session_state.user_id is None:
         st.warning("Please login to see your recommendations")
         return
+
+    # Fetch all recommended book IDs once
+    recommended_book_ids = get_recommendations(st.session_state.user_id)
+    if not recommended_book_ids:
+        st.info("No recommendations available at this time.")
+        return
+
+    # Section 1: Compact list of all recommended books
+    st.subheader("All Recommended Books")
+    with st.expander("View all recommendations", expanded=False):
+        with get_db() as db:
+            all_recs = (
+                db.query(Book)
+                .filter(Book.book_id.in_(recommended_book_ids))
+                .all()
+            )
+            if not all_recs:
+                st.write("No books found for these recommendations.")
+            else:
+                for book in all_recs:
+                    col1, col2 = st.columns([1, 3])
+                    with col1:
+                        if book.cover_image_url:
+                            st.image(book.cover_image_url, width=50)  # Small cover image
+                        else:
+                            st.write("No cover")
+                    with col2:
+                        st.write(book.title)
+
+    # Section 2: Detailed list of listed recommended books with pagination
+    st.subheader("Available in the Community")
 
     # Initialize session state for pagination
     if 'rec_offset' not in st.session_state:
@@ -24,18 +55,7 @@ def display_recommendations():
         st.session_state.total_recs_loaded = 0
 
     def load_recommendations(offset, limit=20):
-        # Get recommended book IDs
-        recommended_book_ids = get_recommendations(st.session_state.user_id)
-        if not recommended_book_ids:
-            st.info("No recommendations available at this time.")
-            return []
-
-        # Debug: Show the recommended book IDs
-        st.write(f"Total recommended book IDs: {len(recommended_book_ids)}")
-        st.write(f"Recommended book IDs: {recommended_book_ids}")
-
         with get_db() as db:
-            # Query listed_books for books that match recommended IDs
             recs = (
                 db.query(ListedBook, Book, User, City)
                 .join(Book, ListedBook.book_id == Book.book_id)
@@ -47,10 +67,6 @@ def display_recommendations():
                 .limit(limit)
                 .all()
             )
-            # Debug: Show what was retrieved
-            st.write(f"Found {len(recs)} listed books matching recommendations")
-            if recs:
-                st.write(f"Retrieved listed book IDs: {[listed_book.book_id for listed_book, _, _, _ in recs]}")
             return recs
 
     # Load initial batch or next batch
@@ -58,7 +74,7 @@ def display_recommendations():
         new_recs = load_recommendations(st.session_state.rec_offset)
         if new_recs:
             st.session_state.displayed_recs.extend(new_recs)
-            st.session_state.rec_offset += len(new_recs)  # Increment by actual number loaded
+            st.session_state.rec_offset += len(new_recs)
             st.session_state.total_recs_loaded += len(new_recs)
 
             # Memory management: keep only the most recent 40 books
@@ -71,17 +87,16 @@ def display_recommendations():
     if not st.session_state.displayed_recs:
         load_next_batch()
 
-    # Display recommended books in a grid
+    # Display listed recommended books in a grid
     if not st.session_state.displayed_recs:
         st.info("No recommended books currently listed by the community.")
     else:
-        st.subheader("Your Recommended Books")
         for i, (listed_book, book, user, city) in enumerate(st.session_state.displayed_recs):
             col1, col2 = st.columns([1, 3])
 
             with col1:
                 if book.cover_image_url:
-                    st.image(book.cover_image_url, width=100)
+                    st.image(book.cover_image_url, width=100)  # Larger cover image for listed books
                 else:
                     st.write("No cover")
 
@@ -100,8 +115,6 @@ def display_recommendations():
                 st.write("---")
 
     # Load more button
-    recommended_book_ids = get_recommendations(st.session_state.user_id)
-    # Estimate if more listed books might exist by checking total recommendations
     if st.button("Load More"):
         load_next_batch()
         st.rerun()

@@ -73,6 +73,7 @@ def listed_books_page():
                     
                     with col2:
                         st.write(f"**{book.title}**")
+                        st.write(f"ISBN:{book.isbn}")
                         if hasattr(book, 'authors') and book.authors:
                             authors = book.authors if isinstance(book.authors, list) else [book.authors]
                             st.write(f"By: {', '.join(str(author) for author in authors)}")
