@@ -2,6 +2,7 @@
 import bcrypt
 import pandas as pd
 from scipy.sparse import coo_matrix
+from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy import create_engine
 
 from models import DATABASE_URL
@@ -176,17 +177,28 @@ def generate_sparse_matrix(all_ratings: pd.DataFrame):
     ratings_mat = ratings_mat.tocsr()
 
     print(f"Generated sparse matrix of shape {ratings_mat.shape}")
+    return ratings_mat
 
 def get_recommendations(user_id: int):
     user_liked_books = get_user_liked_books(user_id)
     overlap_users = get_overlap_users(user_id, user_liked_books)
     user_index,all_similar_book_ratings = get_similar_user_liked_books(user_id, overlap_users)
-    print("user index: ", user_index)
-    generate_sparse_matrix(all_similar_book_ratings)
+    ratings_mat = generate_sparse_matrix(all_similar_book_ratings)
+
+    #find cosine similarity
+    similarity = cosine_similarity(ratings_mat[user_index, :], ratings_mat).flatten()
+
+    #get the index of the most 15 similar user
+    similar_user_indexs = similarity.argsort()[-15:]
+    #remove user_index
+    similar_user_indexs = similar_user_indexs[similar_user_indexs != user_index]
+    #keep values relavan to the similart_user_index in all_similar_book_ratings
+    all_similar_book_ratings = all_similar_book_ratings[all_similar_book_ratings['user_index'].isin(similar_user_indexs)].copy()
+
     return all_similar_book_ratings
 
 if __name__ == "__main__":
     # Test the function
-    target_user_id = 100
-    recommendations = get_recommendations(target_user_id)
-    print(recommendations.head())
+    target_user_id = 2
+    similar_books = get_recommendations(target_user_id)
+    print(similar_books)
