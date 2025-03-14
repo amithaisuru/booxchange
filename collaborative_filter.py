@@ -303,13 +303,4 @@ def get_recommendations(user_id: int):
     book_recs = book_recs[book_recs['mean'] > mean_threshold] # Average rating is at least 3
     book_recs = book_recs.sort_values(by='score', ascending=False)
 
-    print(f"Generated {len(book_recs)} book recommendations for user {user_id}")
-    return book_recs
-
-
-if __name__ == "__main__":
-    # Test the function
-    target_user_id = 2
-    similar_books = get_recommendations(target_user_id)
-    print(f"\nTop book recommendations for user {target_user_id}:")
-    print(similar_books.head(10))  # Show top 10 recommendations
+    return book_recs['book_id'].tolist()
