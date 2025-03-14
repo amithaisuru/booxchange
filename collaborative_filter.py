@@ -1,6 +1,7 @@
 # collaborative_filter.py
 import bcrypt
 import pandas as pd
+from scipy.sparse import coo_matrix
 from sqlalchemy import create_engine
 
 from models import DATABASE_URL
@@ -159,19 +160,33 @@ def get_similar_user_liked_books(user_id: int, overlap_users: pd.DataFrame):
     
     all_ratings['user_index'] = all_ratings['user_id'].map(user_index_map)
     all_ratings['book_index'] = all_ratings['book_id'].map(book_index_map)
+
+    #find the index of user_id
+    user_index = all_ratings[all_ratings['user_id'] == user_id]['user_index'].values[0]
     
     print(f"Found {len(all_ratings)} ratings from {len(unique_users)} users (including target user {user_id})")
-    return all_ratings
+    return user_index,all_ratings
+
+def generate_sparse_matrix(all_ratings: pd.DataFrame):
+    ratings_mat = coo_matrix(
+        (all_ratings['rating'],
+        (all_ratings['user_index'], all_ratings['book_index']))
+    )
+    #conver to csr matrix
+    ratings_mat = ratings_mat.tocsr()
+
+    print(f"Generated sparse matrix of shape {ratings_mat.shape}")
 
 def get_recommendations(user_id: int):
     user_liked_books = get_user_liked_books(user_id)
     overlap_users = get_overlap_users(user_id, user_liked_books)
-    all_similar_book_ratings = get_similar_user_liked_books(user_id, overlap_users)
+    user_index,all_similar_book_ratings = get_similar_user_liked_books(user_id, overlap_users)
+    print("user index: ", user_index)
+    generate_sparse_matrix(all_similar_book_ratings)
     return all_similar_book_ratings
 
 if __name__ == "__main__":
     # Test the function
-    target_user_id = 4
+    target_user_id = 100
     recommendations = get_recommendations(target_user_id)
-    print(f"\nAll ratings from similar users and target user {target_user_id}:")
-    print(recommendations.tail(100))
+    print(recommendations.head())
