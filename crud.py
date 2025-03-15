@@ -9,7 +9,6 @@ from models import Book, ListedBook, RequestedBook, User, UserBookRating
 
 
 def create_user(db: Session, name: str, user_name: str, birth_year: datetime, password: str, city_id: int):
-
     max_id = db.query(func.max(User.user_id)).scalar() or 0
     
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -94,8 +93,8 @@ def rate_book(db: Session, user_id: int, book_id: int, rating: int):
     """
     Rate a book or update an existing rating. This function:
     1. Checks if the user has already rated this book
-    2. Updates the user_book_ratings table
-    3. Updates the book's rating_count based on the rating value
+    2. Updates or inserts into the user_book_ratings table
+    3. The trigger will handle updating rating_count and average_rating
     
     Args:
         db (Session): Database session
@@ -106,11 +105,11 @@ def rate_book(db: Session, user_id: int, book_id: int, rating: int):
     Returns:
         UserBookRating: The created or updated rating record
     """
-    # Get the book
+    # Validate book existence
     book = get_book_details(db, book_id)
     if not book:
         return None
-        
+    
     # Check if the user has already rated this book
     existing_rating = db.query(UserBookRating).filter(
         UserBookRating.user_id == user_id,
@@ -120,27 +119,14 @@ def rate_book(db: Session, user_id: int, book_id: int, rating: int):
     now = datetime.utcnow()
     
     if existing_rating:
-        # User has already rated this book - update the rating
-        old_rating = existing_rating.rating
+        # Update existing rating
         existing_rating.rating = rating
         existing_rating.rated_date = now
-        
-        # Update the book's rating count by removing the old rating value
-        # and adding the new rating value
-        new_count = book.rating_count - old_rating + rating
-        
-        # Update the book's rating count
-        update_stmt = update(Book).where(Book.book_id == book_id).values(
-            rating_count=new_count
-        )
-        db.execute(update_stmt)
-        
         db.commit()
         db.refresh(existing_rating)
         return existing_rating
     else:
-        # This is a new rating
-        # Create the user rating record
+        # Create new rating
         db_rating = UserBookRating(
             user_id=user_id,
             book_id=book_id,
@@ -148,30 +134,31 @@ def rate_book(db: Session, user_id: int, book_id: int, rating: int):
             rated_date=now
         )
         db.add(db_rating)
-        
-        # Update the book's rating count by adding the new rating value
-        new_count = book.rating_count + rating
-        
-        # Update the book
-        update_stmt = update(Book).where(Book.book_id == book_id).values(
-            rating_count=new_count
-        )
-        db.execute(update_stmt)
-        
         db.commit()
         db.refresh(db_rating)
         return db_rating
 
-def add_book_rating(db: Session, user_id: int, book_id: int):
-    db_rating = UserBookRating(
-        user_id=user_id,
-        book_id=book_id,
-        rated_date=datetime.utcnow()
-    )
-    db.add(db_rating)
-    db.commit()
-    db.refresh(db_rating)
-    return db_rating
+def remove_rating(db: Session, user_id: int, book_id: int):
+    """
+    Remove a user's rating for a specific book.
+    
+    Args:
+        db (Session): Database session
+        user_id (int): ID of the user
+        book_id (int): ID of the book
+        
+    Returns:
+        bool: True if rating was removed, False otherwise
+    """
+    rating = db.query(UserBookRating).filter(
+        UserBookRating.user_id == user_id,
+        UserBookRating.book_id == book_id
+    ).first()
+    if rating:
+        db.delete(rating)
+        db.commit()
+        return True
+    return False
 
 def get_trending_books(db: Session, limit: int = 10):
     return (
