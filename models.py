@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     create_engine,
+    text,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, validates
@@ -24,6 +25,105 @@ DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# Bayesian Rating Trigger Function
+BAYESIAN_TRIGGER_FUNCTION = """
+CREATE OR REPLACE FUNCTION update_bayesian_rating()
+RETURNS TRIGGER AS $$
+DECLARE
+    global_avg FLOAT := 0.0;
+    total_ratings INTEGER := 0;
+    sum_ratings INTEGER := 0;
+    m CONSTANT INTEGER := 5;
+BEGIN
+    -- Calculate global average for Bayesian formula
+    SELECT AVG(rating), SUM(rating)
+    INTO global_avg, total_ratings
+    FROM user_book_ratings
+    WHERE rating IS NOT NULL;
+
+    IF global_avg IS NULL THEN
+        global_avg := 0.0;
+    END IF;
+
+    -- INSERT: Add new rating to sum
+    IF TG_OP = 'INSERT' THEN
+        SELECT SUM(rating)
+        INTO sum_ratings
+        FROM user_book_ratings
+        WHERE book_id = NEW.book_id;
+
+        UPDATE books
+        SET rating_count = COALESCE(sum_ratings, 0),
+            average_rating = CASE
+                WHEN sum_ratings > 0 THEN
+                    ((m * global_avg) + COALESCE(sum_ratings, 0)) / (m + (SELECT COUNT(*) FROM user_book_ratings WHERE book_id = NEW.book_id))
+                ELSE
+                    0.0
+                END
+        WHERE book_id = NEW.book_id;
+
+        RAISE NOTICE 'INSERT: Book %, Rating Count = %, Avg = %', NEW.book_id, COALESCE(sum_ratings, 0), (SELECT average_rating FROM books WHERE book_id = NEW.book_id);
+
+    -- UPDATE: Adjust rating_count by the difference
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF NEW.rating != OLD.rating THEN
+            SELECT SUM(rating)
+            INTO sum_ratings
+            FROM user_book_ratings
+            WHERE book_id = NEW.book_id;
+
+            UPDATE books
+            SET rating_count = COALESCE(sum_ratings, 0),
+                average_rating = CASE
+                    WHEN sum_ratings > 0 THEN
+                        ((m * global_avg) + COALESCE(sum_ratings, 0)) / (m + (SELECT COUNT(*) FROM user_book_ratings WHERE book_id = NEW.book_id))
+                    ELSE
+                        0.0
+                    END
+            WHERE book_id = NEW.book_id;
+
+            RAISE NOTICE 'UPDATE: Book %, Old Rating = %, New Rating = %, Rating Count = %, Avg = %', 
+                         NEW.book_id, OLD.rating, NEW.rating, COALESCE(sum_ratings, 0), (SELECT average_rating FROM books WHERE book_id = NEW.book_id);
+        END IF;
+
+    -- DELETE: Subtract removed rating from sum
+    ELSIF TG_OP = 'DELETE' THEN
+        SELECT SUM(rating)
+        INTO sum_ratings
+        FROM user_book_ratings
+        WHERE book_id = OLD.book_id;
+
+        UPDATE books
+        SET rating_count = COALESCE(sum_ratings, 0),
+            average_rating = CASE
+                WHEN sum_ratings > 0 THEN
+                    ((m * global_avg) + COALESCE(sum_ratings, 0)) / (m + (SELECT COUNT(*) FROM user_book_ratings WHERE book_id = OLD.book_id))
+                ELSE
+                    0.0
+                END
+        WHERE book_id = OLD.book_id;
+
+        RAISE NOTICE 'DELETE: Book %, Removed Rating = %, Rating Count = %, Avg = %', 
+                     OLD.book_id, OLD.rating, COALESCE(sum_ratings, 0), (SELECT average_rating FROM books WHERE book_id = OLD.book_id);
+    END IF;
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Recreate the trigger
+DROP TRIGGER IF EXISTS trigger_update_bayesian_rating ON user_book_ratings;
+CREATE TRIGGER trigger_update_bayesian_rating
+AFTER INSERT OR UPDATE OR DELETE ON user_book_ratings
+FOR EACH ROW EXECUTE FUNCTION update_bayesian_rating();
+"""
+
+# Function to initialize triggers
+def init_triggers():
+    with engine.connect() as connection:
+        connection.execute(text(BAYESIAN_TRIGGER_FUNCTION))
+        connection.commit()
 
 class User(Base):
     __tablename__ = "users"
@@ -60,7 +160,7 @@ class Book(Base):
     language_code = Column(String)
     publication_year = Column(Date)
     rating_count = Column(Integer, default=0)
-    average_rating = Column(Float, default=0.0)
+    average_rating = Column(Float, default=0.0)  # Updated by trigger
     authors = Column(ARRAY(Integer))
     cover_image_url = Column(String)
 
