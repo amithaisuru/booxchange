@@ -16,10 +16,12 @@ def display_wall():
         st.session_state.displayed_books = []
     if 'total_loaded' not in st.session_state:
         st.session_state.total_loaded = 0
+    # Add a render counter to ensure unique keys
+    if 'render_count' not in st.session_state:
+        st.session_state.render_count = 0
 
     def load_books(offset, limit=20):
         with get_db() as db:
-            # Query latest books with user and city information
             books = (
                 db.query(ListedBook, Book, User, City)
                 .join(Book, ListedBook.book_id == Book.book_id)
@@ -32,7 +34,6 @@ def display_wall():
             )
             return books
 
-    # Load initial batch or next batch
     def load_next_batch():
         new_books = load_books(st.session_state.wall_offset)
         if new_books:
@@ -40,7 +41,6 @@ def display_wall():
             st.session_state.wall_offset += 20
             st.session_state.total_loaded += len(new_books)
             
-            # Memory management: remove top books when we have more than 40 loaded
             if st.session_state.total_loaded > 40:
                 excess = st.session_state.total_loaded - 40
                 st.session_state.displayed_books = st.session_state.displayed_books[excess:]
@@ -61,7 +61,9 @@ def display_wall():
                 st.write("No cover")
                 
         with col2:
-            if st.button(f"{book.title}", key=f"book_{listed_book.list_id}"):
+            # Use a combination of render_count, index, and list_id to ensure uniqueness
+            unique_key = f"book_{st.session_state.render_count}_{i}_{listed_book.list_id}"
+            if st.button(f"{book.title}", key=unique_key):
                 st.session_state.selected_book = {
                     'list_id': listed_book.list_id,
                     'book_id': book.book_id,
@@ -74,14 +76,15 @@ def display_wall():
             st.write(f"Location: {city.name}")
             st.write("---")
 
-    # Load more button/scroll trigger
-    if st.button("Load More"):
+    # Load more button
+    if st.button("Load More", key="load_more_button"):
         load_next_batch()
+        st.session_state.render_count += 1  # Increment render count
         st.rerun()
 
     # Infinite scroll simulation
     with st.empty():
-        if st.session_state.total_loaded >= 20:  # Only show if there's potential for more
+        if st.session_state.total_loaded >= 20:
             st.write("Scroll to load more...")
 
 if __name__ == "__main__":
