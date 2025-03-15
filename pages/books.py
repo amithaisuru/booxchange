@@ -1,10 +1,8 @@
-import re
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import streamlit as st
-from sklearn.metrics.pairwise import cosine_similarity
 
 from crud import (
     create_book,
@@ -14,18 +12,8 @@ from crud import (
     remove_listed_book,
 )
 from database import get_db
+from utils import search
 
-
-def search(query):
-    vectorizer = pd.read_pickle("pkl_files/vectorizer_searchengine.pkl")
-    titles = pd.read_pickle("pkl_files/book_titles.pkl")
-    processed_query = re.sub("[^a-zA-Z0-9 ]", "", query.lower())
-    query_vect = vectorizer.transform([processed_query])
-    tfidf = vectorizer.fit_transform(titles["mod_title"])
-    similarity_vect = cosine_similarity(query_vect, tfidf).flatten()
-    indices = np.argpartition(similarity_vect, -10)[-10:]
-    top_book_titles = titles.iloc[indices]
-    return top_book_titles["book_id"].values #use a suitable return type
 
 def listed_books_page():
     if 'user_id' not in st.session_state:
