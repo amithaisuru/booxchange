@@ -1,5 +1,6 @@
 import streamlit as st
 
+from database import get_db
 from location_filter import (
     get_cities,
     get_districts,
@@ -164,6 +165,15 @@ def display_wall():
                         'user_id': user.user_id
                     }
                     st.switch_page("pages/book_details.py")
+
+                # Add Message User button (only if logged in and not the same user)
+                if 'user_id' in st.session_state and st.session_state.user_id and st.session_state.user_id != user.user_id:
+                    if st.button("Message User", key=f"msg_{listed_book.list_id}_{i}"):
+                        with get_db() as db:
+                            from messaging import get_or_create_conversation
+                            conv = get_or_create_conversation(db, st.session_state.user_id, user.user_id)
+                            st.session_state.selected_conversation = conv.conversation_id
+                            st.switch_page("pages/messages.py")
 
                 st.write(f"Rating: {book.average_rating}")
                 st.write(f"Posted: {listed_book.listed_date}")

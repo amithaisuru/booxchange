@@ -4,6 +4,7 @@ import streamlit as st
 from database import init_db
 from pages.books import listed_books_page
 from pages.login import login_page
+from pages.messages import messages_page
 from pages.recommendations import display_recommendations  # Import the new function
 from pages.wall import display_wall
 
@@ -51,6 +52,8 @@ def main():
             display_recommendations()
         elif page == "My Books":
             listed_books_page()
+        elif page == "Messages":
+            messages_page()
             
         if st.sidebar.button("Logout"):
             st.session_state.user_id = None
