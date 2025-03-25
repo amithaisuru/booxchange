@@ -5,8 +5,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 from sqlalchemy import (
     ARRAY,
+    Boolean,
     Column,
     Date,
+    DateTime,
     Float,
     ForeignKey,
     Integer,
@@ -251,3 +253,30 @@ class DistrictCity(Base):
     # Relationships
     district = relationship("District", back_populates="cities")
     city = relationship("City", back_populates="districts")
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    conversation_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user1_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    user2_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    messages = relationship("Message", back_populates="conversation")
+    user1 = relationship("User", foreign_keys=[user1_id])
+    user2 = relationship("User", foreign_keys=[user2_id])
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    message_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.conversation_id"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    content = Column(Text, nullable=False)
+    sent_at = Column(DateTime, default=datetime.utcnow)
+    is_read = Column(Boolean, default=False)
+
+    # Relationships
+    conversation = relationship("Conversation", back_populates="messages")
+    sender = relationship("User")
