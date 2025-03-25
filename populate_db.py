@@ -1,8 +1,10 @@
 import bcrypt
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from models import DATABASE_URL
+from crud import list_book
+from models import DATABASE_URL, Book, User
 
 
 # Convert the authors column to the correct format
@@ -24,6 +26,7 @@ def populate_books():
     # Generate the mod_title column
     books_df['mod_title'] = books_df['title'].str.replace(r'[^a-zA-Z\s]', '', regex=True)
     books_df['mod_title'] = books_df['mod_title'].str.replace(r'\s+', ' ', regex=True)
+    books_df['mod_title'] = books_df['mod_title'].str.lower()
 
     books_df = books_df.rename(columns={'ratings_count': 'rating_count'})
     books_df = books_df.rename(columns={'image_url': 'cover_image_url'})
@@ -149,12 +152,63 @@ def populate_user_book_ratings():
 
     print("Data has been successfully inserted into the database.")
 
+def populate_listed_books():
+    # Create a database engine
+    engine = create_engine(DATABASE_URL)
+    
+    # Create a session
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    
+    try:
+        # Get all user_ids and book_ids from the database
+        user_ids = [user.user_id for user in session.query(User).all()]
+        book_ids = [book.book_id for book in session.query(Book).all()]
+        
+        if not user_ids or not book_ids:
+            print("Error: No users or books found in the database")
+            return
+        
+        # Number of listings to create (you can adjust this number)
+        num_listings = min(100, len(user_ids) * len(book_ids) // 2)  # Create reasonable amount of listings
+        
+        import random
+
+        # Create random listings
+        created_listings = set()  # To avoid duplicates
+        for _ in range(num_listings):
+            user_id = random.choice(user_ids)
+            book_id = random.choice(book_ids)
+            
+            # Check for duplicates since user_id and book_id form a composite key
+            if (user_id, book_id) not in created_listings:
+                try:
+                    # Use the list_book function from crud.py
+                    list_book(session, user_id, book_id)
+                    created_listings.add((user_id, book_id))
+                except Exception as e:
+                    print(f"Error listing book {book_id} for user {user_id}: {str(e)}")
+                    session.rollback()
+                    continue
+        
+        # Commit all changes
+        session.commit()
+        print(f"Successfully created {len(created_listings)} book listings in the database.")
+        
+    except Exception as e:
+        print(f"Error in populate_listed_books: {str(e)}")
+        session.rollback()
+        
+    finally:
+        session.close()
+
 if __name__ == "__main__":
-    #populate_books()
+    # populate_books()
     # populate_cities()
     # populate_provinces()
     # populate_districts()
     # populate_province_district()
     # populate_district_city()
     # populate_users()
+    # populate_listed_books()
     populate_user_book_ratings()
