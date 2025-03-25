@@ -26,6 +26,7 @@ def populate_books():
     # Generate the mod_title column
     books_df['mod_title'] = books_df['title'].str.replace(r'[^a-zA-Z\s]', '', regex=True)
     books_df['mod_title'] = books_df['mod_title'].str.replace(r'\s+', ' ', regex=True)
+    books_df['mod_title'] = books_df['mod_title'].str.lower()
 
     books_df = books_df.rename(columns={'ratings_count': 'rating_count'})
     books_df = books_df.rename(columns={'image_url': 'cover_image_url'})
@@ -169,7 +170,7 @@ def populate_listed_books():
             return
         
         # Number of listings to create (you can adjust this number)
-        num_listings = min(1000, len(user_ids) * len(book_ids) // 2)  # Create reasonable amount of listings
+        num_listings = min(100, len(user_ids) * len(book_ids) // 2)  # Create reasonable amount of listings
         
         import random
 
@@ -183,7 +184,7 @@ def populate_listed_books():
             if (user_id, book_id) not in created_listings:
                 try:
                     # Use the list_book function from crud.py
-                    listed_book = list_book(session, user_id, book_id)
+                    list_book(session, user_id, book_id)
                     created_listings.add((user_id, book_id))
                 except Exception as e:
                     print(f"Error listing book {book_id} for user {user_id}: {str(e)}")
@@ -202,12 +203,12 @@ def populate_listed_books():
         session.close()
 
 if __name__ == "__main__":
-    #populate_books()
+    # populate_books()
     # populate_cities()
     # populate_provinces()
     # populate_districts()
     # populate_province_district()
     # populate_district_city()
     # populate_users()
-    #populate_user_book_ratings()
-    populate_listed_books()
+    # populate_listed_books()
+    populate_user_book_ratings()
