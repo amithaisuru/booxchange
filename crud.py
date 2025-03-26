@@ -51,7 +51,15 @@ def verify_user(db: Session, name: str, password: str):
     return None
 
 def create_book(db: Session, book_data: dict):
-    db_book = Book(**book_data)
+    # Get the maximum book_id from the books table, default to 0 if table is empty
+    max_id = db.query(func.max(Book.book_id)).scalar() or 0
+    new_book_id = max_id + 1
+    
+    # Create the book object with the new book_id
+    db_book = Book(
+        book_id=new_book_id,  # Explicitly set the book_id
+        **book_data
+    )
     db.add(db_book)
     db.commit()
     db.refresh(db_book)
