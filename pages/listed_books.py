@@ -173,7 +173,7 @@ def listed_books_page():
                     st.rerun()
         
         # Display existing books (existing)
-        st.subheader("My Listed Books")
+        st.subheader("My Listings")
         books = get_user_listed_books(db, st.session_state.user_id)
         
         if not books:

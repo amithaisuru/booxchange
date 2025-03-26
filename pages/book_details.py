@@ -46,14 +46,13 @@ def display_book_details():
                 
         with col2:
             st.header(book.title)
+            st.write(f"ISBN: {book.isbn or 'Not available'}")
+            st.write(f"Posted by: {user.user_name}")
+            st.write(f"Posted on: {listed_book.listed_date}")
+            st.write(f"Book ID: {book_id}")
             if book.authors:
                 authors = book.authors if isinstance(book.authors, list) else [book.authors]
                 st.write(f"Authors: {', '.join(str(author) for author in authors)}")
-            st.write(f"ISBN: {book.isbn or 'Not available'}")
-            st.write(f"Posted on: {listed_book.listed_date}")
-            st.write(f"Posted by: {user.user_name}")
-            st.write(f"Book ID: {book_id}")
-            
             # Display current rating information
             st.write(f"Average Rating: {book.average_rating:.1f}/5 ({book.rating_count} ratings)")
             
