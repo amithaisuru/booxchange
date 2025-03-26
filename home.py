@@ -1,18 +1,35 @@
-# main.py
 import streamlit as st
 
 from database import init_db
 from pages.books import listed_books_page
 from pages.login import login_page
 from pages.messages import messages_page
-from pages.recommendations import display_recommendations  # Import the new function
+from pages.recommendations import display_recommendations
 from pages.wall import display_wall
+from trending import get_trending_books_simple
 
 
 def display_trending():
     st.title("Trending Books")
     st.write("Books that are popular right now")
-    st.info("This page will display trending books based on user activity.")
+
+    trending_books = get_trending_books_simple(limit=10, days=7)
+
+    if not trending_books:
+        st.info("No trending books available at this time.")
+    else:
+        for i, book in enumerate(trending_books):
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                if book.cover_image_url:
+                    st.image(book.cover_image_url, width=100)
+                else:
+                    st.write("No cover")
+            with col2:
+                st.subheader(book.title)
+                st.write(f"Average Rating: {book.average_rating:.1f}")
+                st.write(f"Rating Count: {book.rating_count}")
+                st.write("---")
 
 
 def main():
