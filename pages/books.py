@@ -187,7 +187,7 @@ def listed_books_page():
                     st.rerun()
         
         # Display existing books
-        st.subheader("My Listed Books")
+        st.subheader("My Listings")
         try:
             books = get_user_listed_books(db, st.session_state.user_id)
         except Exception as e:
