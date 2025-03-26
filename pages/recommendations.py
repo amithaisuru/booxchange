@@ -8,8 +8,7 @@ from models import Book, City, ListedBook, User
 
 
 def display_recommendations():
-    st.title("Book Recommendations")
-    st.write("Books recommended for you based on your ratings")
+    st.title("Recomended For You")
 
     if 'user_id' not in st.session_state or st.session_state.user_id is None:
         st.warning("Please login to see your recommendations")

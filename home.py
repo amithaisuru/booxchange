@@ -11,7 +11,6 @@ from trending import get_trending_books_simple
 
 def display_trending():
     st.title("Trending Books")
-    st.write("Books that are popular right now")
 
     trending_books = get_trending_books_simple(limit=10, days=7)
 
