@@ -39,7 +39,7 @@ def listed_books_page():
         # Add new book section
         with st.expander("Add New Book", expanded=False):
             # ISBN Search option
-            st.subheader("Search by ISBN")
+            st.subheader("Add book from the library")
             isbn_query = st.text_input("Enter ISBN to search")
             
             if st.button("Search by ISBN") and isbn_query:
@@ -85,10 +85,9 @@ def listed_books_page():
                     st.rerun()
 
             # General Search option
-            st.subheader("Add book from the library")
-            search_query = st.text_input("Search for the book to add")
+            search_query = st.text_input("Enter Title to search")
             
-            if st.button("Search") and search_query:
+            if st.button("Search by Title") and search_query:
                 book_ids = search(search_query)
                 books = [get_book_details(db, book_id) for book_id in book_ids if get_book_details(db, book_id)]
                 st.session_state.search_results = books
