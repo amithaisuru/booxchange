@@ -124,7 +124,7 @@ def rate_book(db: Session, user_id: int, book_id: int, rating: int):
         UserBookRating.book_id == book_id
     ).first()
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     if existing_rating:
         # Update existing rating
