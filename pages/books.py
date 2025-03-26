@@ -39,15 +39,15 @@ def listed_books_page():
         # Add new book section
         with st.expander("Add New Book", expanded=False):
             # ISBN Search option
-            st.subheader("Add book from the library")
-            isbn_query = st.text_input("Search by ISBN")
+            st.subheader("Search by ISBN")
+            isbn_query = st.text_input("Enter ISBN to search")
             
             if st.button("Search by ISBN") and isbn_query:
                 book = search_book_by_isbn(db, isbn_query)
                 if book:
                     st.session_state.isbn_search_result = book
-                    st.session_state.search_results = None  # Clear general search results
-                    st.session_state.selected_book = None  # Reset selected book
+                    st.session_state.search_results = None
+                    st.session_state.selected_book = None
                 else:
                     st.session_state.isbn_search_result = None
                     st.error("No book found with this ISBN.")
@@ -75,7 +75,7 @@ def listed_books_page():
                     try:
                         list_book(db, st.session_state.user_id, book.book_id)
                         st.success("Book listed successfully!")
-                        st.session_state.isbn_search_result = None  # Clear result after listing
+                        st.session_state.isbn_search_result = None
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error listing book: {str(e)}")
@@ -84,17 +84,18 @@ def listed_books_page():
                     st.session_state.isbn_search_result = None
                     st.rerun()
 
-            # General Search option (existing)
-            search_query = st.text_input("Search by name")
+            # General Search option
+            st.subheader("Add book from the library")
+            search_query = st.text_input("Search for the book to add")
             
             if st.button("Search") and search_query:
                 book_ids = search(search_query)
                 books = [get_book_details(db, book_id) for book_id in book_ids if get_book_details(db, book_id)]
                 st.session_state.search_results = books
                 st.session_state.selected_book = None
-                st.session_state.isbn_search_result = None  # Clear ISBN result
+                st.session_state.isbn_search_result = None
             
-            # Display general search results (existing)
+            # Display general search results
             if st.session_state.search_results:
                 st.subheader("Search Results")
                 for i, book in enumerate(st.session_state.search_results):
@@ -115,34 +116,48 @@ def listed_books_page():
                         if st.button("Select", key=f"select_{i}"):
                             st.session_state.selected_book = book
             
-            # Display manual entry form if no book is selected (existing)
+            # Manual entry form with ISBN check
             if not st.session_state.selected_book and not st.session_state.isbn_search_result:
                 st.subheader("Or add book manually")
                 with st.form("add_book_form"):
-                    title = st.text_input("Book Title")
-                    isbn = st.text_input("ISBN")
-                    authors = st.text_input("Authors (comma-separated)")
-                    pub_year = st.date_input("Publication Year")
+                    title = st.text_input("Book Title (required)")
+                    isbn = st.text_input("ISBN (optional)")
+                    authors = st.text_input("Authors (comma-separated, optional)")
+                    pub_year = st.date_input("Publication Year (optional)", value=None, min_value=datetime(1000, 1, 1), max_value=datetime.now())
                     
                     if st.form_submit_button("Add Book"):
-                        if title:
+                        if not title:
+                            st.error("Book title is required")
+                        else:
+                            # Check if ISBN exists if provided
+                            if isbn:
+                                existing_book = search_book_by_isbn(db, isbn)
+                                if existing_book:
+                                    st.error(f"A book with ISBN {isbn} already exists in the database. Please use 'Search by ISBN' to list it.")
+                                    return
+                            
+                            # Prepare book data
                             book_data = {
                                 "title": title,
-                                "isbn": isbn,
+                                "isbn": isbn if isbn else None,
                                 "authors": authors.split(',') if authors else [],
-                                "publication_year": pub_year
+                                "publication_year": pub_year if pub_year else None,
+                                "rating_count": 0,  # Default value
+                                "average_rating": 0.0  # Default value
                             }
                             try:
+                                # Add new book to the books table
                                 new_book = create_book(db, book_data)
+                                # List the book for the user
                                 list_book(db, st.session_state.user_id, new_book.book_id)
-                                st.success("Book added successfully!")
+                                st.success("Book added and listed successfully!")
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Error adding book: {str(e)}")
-                        else:
-                            st.error("Book title is required")
+                                db.rollback()  # Rollback the session on error
+                                return
             
-            # If a book is selected from general search, show confirmation (existing)
+            # If a book is selected from general search, show confirmation
             elif st.session_state.selected_book:
                 st.subheader("Selected Book")
                 col1, col2 = st.columns([1, 3])
@@ -171,32 +186,37 @@ def listed_books_page():
                     st.session_state.selected_book = None
                     st.rerun()
         
-        # Display existing books (existing)
+        # Display existing books
         st.subheader("My Listed Books")
-        books = get_user_listed_books(db, st.session_state.user_id)
-        
+        try:
+            books = get_user_listed_books(db, st.session_state.user_id)
+        except Exception as e:
+            st.error(f"Error fetching listed books: {str(e)}")
+            db.rollback()  # Rollback the session if an error occurs
+            books = []
+
         if not books:
             st.info("You haven't listed any books yet.")
-        
-        for book in books:
-            col1, col2, col3 = st.columns([2, 3, 1])
-            with col1:
-                if book.cover_image_url:
-                    st.image(book.cover_image_url, width=100)
-                else:
-                    st.write("No cover available")
-            with col2:
-                st.subheader(book.title)
-                if hasattr(book, 'authors') and book.authors:
-                    authors = book.authors if isinstance(book.authors, list) else [book.authors]
-                    st.write(f"Authors: {', '.join(str(author) for author in authors)}")
-            with col3:
-                if st.button("Remove", key=f"remove_{book.book_id}"):
-                    if remove_listed_book(db, st.session_state.user_id, book.book_id):
-                        st.success("Book removed successfully!")
+        else:
+            for book in books:
+                col1, col2, col3 = st.columns([2, 3, 1])
+                with col1:
+                    if book.cover_image_url:
+                        st.image(book.cover_image_url, width=100)
                     else:
-                        st.error("Error removing book")
-                    st.rerun()
+                        st.write("No cover available")
+                with col2:
+                    st.subheader(book.title)
+                    if hasattr(book, 'authors') and book.authors:
+                        authors = book.authors if isinstance(book.authors, list) else [book.authors]
+                        st.write(f"Authors: {', '.join(str(author) for author in authors)}")
+                with col3:
+                    if st.button("Remove", key=f"remove_{book.book_id}"):
+                        if remove_listed_book(db, st.session_state.user_id, book.book_id):
+                            st.success("Book removed successfully!")
+                        else:
+                            st.error("Error removing book")
+                        st.rerun()
 
 if __name__ == "__main__":
     listed_books_page()
