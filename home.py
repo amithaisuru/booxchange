@@ -1,6 +1,7 @@
 import streamlit as st
 
-from database import init_db
+from database import get_db, init_db
+from models import ListedBook
 from pages.books import listed_books_page
 from pages.login import login_page
 from pages.messages import messages_page
@@ -17,18 +18,38 @@ def display_trending():
     if not trending_books:
         st.info("No trending books available at this time.")
     else:
-        for i, book in enumerate(trending_books):
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                if book.cover_image_url:
-                    st.image(book.cover_image_url, width=100)
-                else:
-                    st.write("No cover")
-            with col2:
-                st.subheader(book.title)
-                st.write(f"Average Rating: {book.average_rating:.1f}")
-                st.write(f"Rating Count: {book.rating_count}")
-                st.write("---")
+        with get_db() as db:  # Open a database session to fetch listing details
+            for i, book in enumerate(trending_books):
+                # Fetch the most recent listing for this book (assuming one listing per book for simplicity)
+                listed_book = (
+                    db.query(ListedBook)
+                    .filter(ListedBook.book_id == book.book_id)
+                    .order_by(ListedBook.listed_date.desc())
+                    .first()
+                )
+                
+                col1, col2 = st.columns([1, 3])
+                with col1:
+                    if book.cover_image_url:
+                        st.image(book.cover_image_url, width=100)
+                    else:
+                        st.write("No cover")
+                with col2:
+                    # Button to go to book details page
+                    if listed_book:  # Ensure there's a listing
+                        if st.button(f"{book.title}", key=f"trend_{book.book_id}_{i}"):
+                            st.session_state.selected_book = {
+                                'list_id': listed_book.list_id,
+                                'book_id': book.book_id,
+                                'user_id': listed_book.user_id
+                            }
+                            st.switch_page("pages/book_details.py")
+                    else:
+                        st.subheader(book.title)  # Fallback if no listing exists
+                    
+                    st.write(f"Average Rating: {book.average_rating:.1f}")
+                    st.write(f"Rating Count: {book.rating_count}")
+                    st.write("---")
 
 
 def main():
