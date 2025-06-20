@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import bcrypt
 from sqlalchemy import func, update
@@ -74,7 +74,7 @@ def list_book(db: Session, user_id: int, book_id: int):
         list_id=list_id + 1,
         user_id=user_id,
         book_id=book_id,
-        listed_date=datetime.utcnow()
+        listed_date=datetime.now(timezone.utc)  # Updated to timezone-aware UTC
     )
     db.add(db_listed_book)
     db.commit()
@@ -124,7 +124,7 @@ def rate_book(db: Session, user_id: int, book_id: int, rating: int):
         UserBookRating.book_id == book_id
     ).first()
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     if existing_rating:
         # Update existing rating

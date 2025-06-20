@@ -188,7 +188,7 @@ class ListedBook(Base):
     list_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), primary_key=True)
     book_id = Column(Integer, ForeignKey("books.book_id"), primary_key=True)
-    listed_date = Column(Date, default=datetime.utcnow)
+    listed_date = Column(DateTime, default=lambda: datetime.now(datetime.UTC))
 
     # Relationships
     user = relationship("User", back_populates="listed_books")
