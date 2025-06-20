@@ -22,10 +22,9 @@ A collaborative platform for sharing physical copies of books with an intelligen
 - User location integration
 
 ## Screenshots
-
-!(screenshots/booxchange_1.png)
-!(screenshots/booxchange_2.png)
-!(srceenshots/booxchange_3.png)
+![screenshot](screenshots/booxchange_1.png)
+![screenshot](screenshots/booxchange_2.png)
+![screenshot](srceenshots/booxchange_3.png)
 ## Tech Stack
 
 ### **Backend**
