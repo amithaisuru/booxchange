@@ -10,7 +10,6 @@ def messages_page():
         return
 
     st.title("Messages")
-    st.write("Chat with other users about books!")
 
     # Initialize session state for selected conversation
     if 'selected_conversation' not in st.session_state:
@@ -38,7 +37,7 @@ def messages_page():
             other_user = next(conv['other_user'] for conv in conversations 
                             if conv['conversation_id'] == st.session_state.selected_conversation)
             
-            st.subheader(f"Conversation with {other_user}")
+            st.subheader(f"Chat with: {other_user}")
             
             # Display messages
             for msg in messages:
