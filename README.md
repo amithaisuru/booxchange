@@ -23,9 +23,9 @@ A collaborative platform for sharing physical copies of books with an intelligen
 
 ## Screenshots
 
-![Home Page](sceenshots/booxchange_1)
-![Book Wall](sceenshots/booxchange_2)
-![Book Details](sceenshots/booxchange_3)
+!(screenshots/booxchange_1.png)
+!(screenshots/booxchange_2.png)
+!(srceenshots/booxchange_3.png)
 ## Tech Stack
 
 ### **Backend**
