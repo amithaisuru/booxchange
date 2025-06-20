@@ -1,4 +1,4 @@
-# BookXchange 📚
+# BooXchange 📚
 
 A collaborative platform for sharing physical copies of books with an intelligent recommendation engine. Users can list books they own, discover books from their community, and get personalized recommendations based on their reading preferences.
 
@@ -61,8 +61,8 @@ A collaborative platform for sharing physical copies of books with an intelligen
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/bookxchange.git
-   cd bookxchange
+   git clone https://github.com/yourusername/booxchange.git
+   cd booxchange
    ```
 
 2. **Create virtual environment**
@@ -80,11 +80,11 @@ A collaborative platform for sharing physical copies of books with an intelligen
    ```bash
    # Create PostgreSQL database
    psql -U postgres
-   CREATE DATABASE bookxchange_db;
+   CREATE DATABASE booxchange_db;
    \q
    
    # Run the SQL schema
-   psql -U postgres -d bookxchange_db -f bookxchange_db.sql
+   psql -U postgres -d booxchange_db -f booxchange_db.sql
    ```
 
 5. **Configure Environment**
@@ -184,4 +184,4 @@ Recent activity-based trending in [`get_trending_books()`](trending.py):
 
 ---
 
-**BookXchange** - Connecting readers, one book at a time! 📖✨
+**booxchange** - Connecting readers, one book at a time! 📖✨
