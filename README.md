@@ -182,14 +182,6 @@ Recent activity-based trending in [`get_trending_books()`](trending.py):
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For support, please open an issue on GitHub or contact the development team.
-
 ---
 
 **BookXchange** - Connecting readers, one book at a time! 📖✨
